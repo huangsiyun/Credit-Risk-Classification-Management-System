@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/mvc
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd
+       http://www.springframework.org/schema/util
+       http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <!-- Spring MVC注解驱动 - 核心特性之一：启用注解处理和类型转换 -->
+    <mvc:annotation-driven/>
+
+    <!-- 扫描控制器 - 核心特性之二：组件扫描自动注册Controller -->
+    <context:component-scan base-package="com.hoico"/>
+
+    <!-- 静态资源处理 - 配置静态资源访问路径 -->
+    <mvc:resources mapping="/static/**" location="/static/" cache-period="31536000"/>
+    <mvc:resources mapping="/views/**" location="/views/" cache-period="31536000"/>
+    <mvc:resources mapping="/*.html" location="/" cache-period="31536000"/>
+    <mvc:resources mapping="/favicon.ico" location="/favicon.ico" cache-period="31536000"/>
+
+    <!-- 配置拦截器 - 核心特性之三：Spring MVC拦截器实现登录验证 -->
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <mvc:mapping path="/api/**"/>
+            <mvc:exclude-mapping path="/api/users/login" /> 
+            <mvc:exclude-mapping path="/api/users/register" /> 
+            <mvc:exclude-mapping path="/api/articles"/>
+            <mvc:exclude-mapping path="/api/articles/*"/>
+            <mvc:exclude-mapping path="/api/categories"/>
+            <mvc:exclude-mapping path="/api/categories/*"/>
+            <ref bean="loginInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+    <!-- 配置消息转换器，确保所有响应都使用UTF-8编码 -->
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter">
+        <property name="messageConverters">
+            <list>
+                <!-- 字符串转换器 -->
+                <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                    <property name="defaultCharset" value="UTF-8" />
+                    <property name="supportedMediaTypes">
+                        <list>
+                            <value>text/plain;charset=UTF-8</value>
+                            <value>text/html;charset=UTF-8</value>
+                            <value>application/json;charset=UTF-8</value>
+                            <value>application/x-www-form-urlencoded;charset=UTF-8</value>
+                        </list>
+                    </property>
+                </bean>
+                <!-- JSON转换器 -->
+                <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+                    <property name="objectMapper">
+                        <bean class="com.fasterxml.jackson.databind.ObjectMapper">
+                            <property name="dateFormat">
+                                <bean class="java.text.SimpleDateFormat">
+                                    <constructor-arg value="yyyy-MM-dd HH:mm:ss" />
+                                </bean>
+                            </property>
+                            <property name="serializationInclusion" value="NON_NULL" />
+                        </bean>
+                    </property>
+                    <property name="supportedMediaTypes">
+                        <list>
+                            <value>application/json;charset=UTF-8</value>
+                            <value>text/json;charset=UTF-8</value>
+                        </list>
+                    </property>
+                </bean>
+            </list>
+        </property>
+    </bean>
+    
+    <!-- 配置ContentNegotiationManager，确保响应使用正确的媒体类型 -->
+    <bean id="contentNegotiationManager" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+        <property name="favorPathExtension" value="false" />
+        <property name="favorParameter" value="true" />
+        <property name="mediaTypes">
+            <map>
+                <entry key="json" value="application/json;charset=UTF-8" />
+                <entry key="xml" value="application/xml;charset=UTF-8" />
+            </map>
+        </property>
+    </bean>
+
+
+</beans>
