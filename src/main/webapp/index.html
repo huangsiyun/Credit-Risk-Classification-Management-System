@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumeBlog</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <!-- 引入Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- 引入Axios用于API请求 -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@0.21.1/dist/axios.min.js"></script>
+    <!-- 引入Bootstrap样式 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/style.css">
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="index.html"><img src="static/images/logo.png" alt="LumeBlog" height="50"></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item active" id="nav-home">
+                        <a class="nav-link" href="#">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="views/article-list.html?v=20260326" @click.prevent="checkLoginBeforeNavigate('views/article-list.html?v=20260326')">我的文章</a>
+                    </li>
+                    <li>
+                        <a class="nav-link" href="views/article-edit.html?v=20260326" @click.prevent="checkLoginBeforeNavigate('views/article-edit.html?v=20260326')">我要发表</a>
+                    </li>
+                </ul>
+                <div class="form-inline my-2 my-lg-0" id="user-actions">
+                    <a href="views/login.html" class="btn btn-outline-primary mr-2" v-if="!isLoggedIn">登录</a>
+                    <a href="views/register.html" class="btn btn-primary mr-2" v-if="!isLoggedIn">注册</a>
+                    <span class="mr-2" v-if="isLoggedIn">欢迎，{{ currentUser.nickname }}</span>
+                    <button class="btn btn-outline-danger" v-if="isLoggedIn" @click="logout">登出</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 文章列表页面 -->
+        <div id="article-list">
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h2>文章列表</h2>
+                </div>
+            </div>
+            <!-- 搜索栏 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" placeholder="按标题搜索" v-model="searchTitle">
+                </div>
+                <div class="col-md-3">
+                    <input type="text" class="form-control" placeholder="按作者搜索" v-model="searchAuthor">
+                </div>
+                <div class="col-md-3">
+                    <input type="text" class="form-control" placeholder="按关键字搜索" v-model="searchKeyword">
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-primary btn-block" @click="searchArticles">搜索</button>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary btn-block" @click="resetSearch">重置</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-9">
+                    <div class="article-item" v-for="article in articles" :key="article.id">
+                        <h3><a href="#" @click.prevent="viewArticle(article.id)">{{ article.title }}</a></h3>
+                        <p class="meta">作者：{{ article.user ? article.user.nickname : '未知' }} | 
+                            分类：{{ article.category ? article.category.name : '未分类' }} | 
+                            浏览：{{ article.viewCount }} | 
+                            时间：{{ formatDate(article.createTime) }}</p>
+                        <p class="summary">{{ article.summary }}</p>
+                        <div class="article-actions">
+                            <a href="#" class="btn btn-link" @click.prevent="viewArticle(article.id)">阅读全文</a>
+                            <button class="btn btn-sm btn-outline-info mr-2" v-if="isLoggedIn && isAuthor(article)" @click="editArticle(article)">编辑</button>
+                            <button class="btn btn-sm btn-outline-danger" v-if="isLoggedIn && isAuthor(article)" @click="deleteArticle(article.id)">删除</button>
+                            <button class="btn btn-link p-0 ml-2" @click="toggleLike(article)" v-if="isLoggedIn">
+                                <i class="fa" :class="article.isLiked ? 'fa-heart text-danger' : 'fa-heart-o text-muted'" style="font-size: 1.2rem;"></i>
+                                <span class="ml-1">{{ article.likeCount || 0 }}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="pagination mt-4">
+                        <button class="btn btn-outline-secondary" :disabled="currentPageNum <= 1" @click="prevPage">上一页</button>
+                        <span class="mx-2">{{ currentPageNum }} / {{ totalPages }}</span>
+                        <button class="btn btn-outline-secondary" :disabled="currentPageNum >= totalPages" @click="nextPage">下一页</button>
+                    </div>
+                    <br><br><br>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-header">分类</div>
+                        <div class="card-body">
+                            <ul class="category-list">
+                                <li><a href="#" @click.prevent="filterByCategory(null)" :class="{ active: selectedCategory === null }">全部</a>
+                                </li>
+                                <li v-for="category in categories" :key="category.id">
+                                    <a href="#" @click.prevent="filterByCategory(category.id)"
+                                        :class="{ active: selectedCategory === category.id }">{{ category.name }}</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文章详情页面 -->
+        <div id="article-detail">
+            <div class="row">
+                <div class="col-md-9">
+                    <div class="article-detail">
+                        <h1>{{ currentArticle.title }}</h1>
+                        <p class="meta">作者：{{ currentArticle.user ? currentArticle.user.nickname : '未知' }} | 
+                            分类：{{ currentArticle.category ? currentArticle.category.name : '未分类' }} | 
+                            浏览：{{ currentArticle.viewCount }} | 
+                            点赞：{{ currentArticle.likeCount || 0 }} | 
+                            时间：{{ formatDate(currentArticle.createTime) }}</p>
+                        <div class="content">{{ currentArticle.content }}</div>
+                        <div class="mt-4">
+                        <button class="btn btn-outline-primary" @click="backToList">返回列表</button>
+                        <button class="btn btn-link p-0 ml-2" @click="toggleLike">
+                            <i class="fa" :class="currentArticle.isLiked ? 'fa-heart text-danger' : 'fa-heart-o text-muted'" style="font-size: 1.2rem;"></i>
+                            <span class="ml-1">{{ currentArticle.likeCount || 0 }}</span>
+                        </button>
+                    </div>
+                    </div>
+
+                    <!-- 评论区 -->
+                    <div class="comments-section mt-6">
+                        <h3>评论 ({{ comments.length }})</h3>
+                        <!-- 评论表单 -->
+                        <div class="comment-form mt-4" v-if="isLoggedIn">
+                            <div class="form-group">
+                                <textarea class="form-control" rows="3" v-model="newComment.content" placeholder="写下你的评论..."></textarea>
+                            </div>
+                            <button class="btn btn-primary" @click="submitComment">提交评论</button>
+                        </div>
+                        <div v-else class="alert alert-info">请先登录后再评论</div>
+
+                        <!-- 评论列表 -->
+                        <div class="comment-list mt-4">
+                            <div class="comment-item" v-for="comment in comments" :key="comment.id">
+                                <div class="comment-header">
+                                    <span class="comment-author">{{ comment.user ? comment.user.nickname : '未知用户' }}</span>
+                                    <span class="comment-time">{{ formatDate(comment.createTime) }}</span>
+                                </div>
+                                <div class="comment-content">{{ comment.content }}</div>
+                                <button class="btn btn-sm btn-outline-danger" v-if="isLoggedIn && isCommentAuthor(comment)" @click="deleteComment(comment.id)">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-header">相关推荐</div>
+                        <div class="card-body">
+                            <ul class="related-articles" v-if="relatedArticles.length > 0">
+                                <li v-for="article in relatedArticles" :key="article.id">
+                                    <a href="#" @click="viewArticle(article.id)">{{ article.title }}</a>
+                                </li>
+                            </ul>
+                            <p v-else>暂无相关文章</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+    <script src="static/js/main.js?v=20260326210000"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
