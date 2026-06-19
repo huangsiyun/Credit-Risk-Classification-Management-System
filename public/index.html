@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>食品企业信用风险分类管理系统</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">信</span>
+          <div>
+            <h1>食品企业信用风险</h1>
+            <p>分类监管系统</p>
+          </div>
+        </div>
+        <nav class="nav">
+          <button class="active" data-view="dashboard">风险看板</button>
+          <button data-view="enterprises">企业档案</button>
+          <button data-view="warnings">风险预警</button>
+          <button data-view="tasks">监管任务</button>
+          <button data-view="indicators">指标库</button>
+          <button data-view="ledger">监管台账</button>
+          <button data-view="system">系统管理</button>
+        </nav>
+        <div class="login-panel" id="loginPanel">
+          <label>账号</label>
+          <input id="username" value="admin" autocomplete="username" />
+          <label>密码</label>
+          <input id="password" type="password" value="Admin@123456" autocomplete="current-password" />
+          <button id="loginBtn">登录系统</button>
+          <p id="loginHint">请先登录后查看数据。</p>
+        </div>
+      </aside>
+
+      <section class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">监管端工作台</p>
+            <h2 id="pageTitle">风险看板</h2>
+          </div>
+          <div class="top-actions">
+            <button class="ghost" id="refreshBtn">刷新</button>
+            <div class="user-pill" id="userPill">未登录</div>
+          </div>
+        </header>
+
+        <section id="dashboardView" class="view active">
+          <div class="cards" id="dashboardCards"></div>
+          <div class="grid two">
+            <section class="panel">
+              <h3>风险等级分布</h3>
+              <div class="level-bars" id="levelBars"></div>
+            </section>
+            <section class="panel">
+              <h3>区域企业分布</h3>
+              <div class="region-list" id="regionList"></div>
+            </section>
+          </div>
+          <div class="grid two">
+            <section class="panel">
+              <h3>近期预警</h3>
+              <div class="list" id="recentWarnings"></div>
+            </section>
+            <section class="panel">
+              <h3>近期任务</h3>
+              <div class="list" id="recentTasks"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="enterprisesView" class="view">
+          <div class="toolbar">
+            <input id="enterpriseKeyword" placeholder="企业名称 / 统一社会信用代码" />
+            <select id="riskLevelFilter">
+              <option value="">全部等级</option>
+              <option value="A">A 级</option>
+              <option value="B">B 级</option>
+              <option value="C">C 级</option>
+              <option value="D">D 级</option>
+            </select>
+            <button id="searchEnterpriseBtn">查询</button>
+            <button id="newEnterpriseBtn">新增企业</button>
+          </div>
+          <section class="panel table-panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>企业名称</th>
+                  <th>信用代码</th>
+                  <th>区域</th>
+                  <th>食品类别</th>
+                  <th>等级</th>
+                  <th>分数</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="enterpriseRows"></tbody>
+            </table>
+          </section>
+        </section>
+
+        <section id="warningsView" class="view">
+          <div class="toolbar">
+            <select id="warningStatusFilter">
+              <option value="">全部状态</option>
+              <option value="OPEN">待处理</option>
+              <option value="JUDGED">已研判</option>
+              <option value="DISPATCHED">已派发</option>
+              <option value="CLOSED">已关闭</option>
+            </select>
+            <button id="searchWarningBtn">查询</button>
+          </div>
+          <section class="panel table-panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>预警编号</th>
+                  <th>企业</th>
+                  <th>类型</th>
+                  <th>等级</th>
+                  <th>状态</th>
+                  <th>原因</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="warningRows"></tbody>
+            </table>
+          </section>
+        </section>
+
+        <section id="tasksView" class="view">
+          <div class="toolbar">
+            <select id="taskStatusFilter">
+              <option value="">全部状态</option>
+              <option value="PENDING">待派发</option>
+              <option value="ASSIGNED">已派发</option>
+              <option value="PROCESSING">处理中</option>
+              <option value="RECTIFYING">整改中</option>
+              <option value="REVIEWING">复查中</option>
+              <option value="ARCHIVED">已归档</option>
+            </select>
+            <button id="searchTaskBtn">查询</button>
+          </div>
+          <section class="panel table-panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>任务编号</th>
+                  <th>标题</th>
+                  <th>企业</th>
+                  <th>状态</th>
+                  <th>执行部门</th>
+                  <th>截止时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="taskRows"></tbody>
+            </table>
+          </section>
+        </section>
+
+        <section id="indicatorsView" class="view">
+          <section class="panel table-panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>编码</th>
+                  <th>指标名称</th>
+                  <th>类别</th>
+                  <th>权重</th>
+                  <th>阈值</th>
+                  <th>版本</th>
+                </tr>
+              </thead>
+              <tbody id="indicatorRows"></tbody>
+            </table>
+          </section>
+        </section>
+
+        <section id="ledgerView" class="view">
+          <div class="grid two">
+            <section class="panel">
+              <h3>评分记录</h3>
+              <div class="list" id="scoreLedger"></div>
+            </section>
+            <section class="panel">
+              <h3>信用修复</h3>
+              <div class="list" id="repairLedger"></div>
+            </section>
+          </div>
+          <div class="grid two">
+            <section class="panel">
+              <h3>预警台账</h3>
+              <div class="list" id="warningLedger"></div>
+            </section>
+            <section class="panel">
+              <h3>任务台账</h3>
+              <div class="list" id="taskLedger"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="systemView" class="view">
+          <div class="grid two">
+            <section class="panel">
+              <h3>用户与角色</h3>
+              <div class="list" id="systemUsers"></div>
+            </section>
+            <section class="panel">
+              <h3>审计日志</h3>
+              <div class="list" id="systemLogs"></div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="detailDialog">
+      <div class="dialog-head">
+        <h3 id="dialogTitle">详情</h3>
+        <button class="icon-btn" id="closeDialogBtn">×</button>
+      </div>
+      <div id="dialogBody"></div>
+    </dialog>
+
+    <div class="toast" id="toast"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
