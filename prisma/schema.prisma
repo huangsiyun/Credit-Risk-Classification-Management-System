@@ -1,0 +1,371 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        Int            @id @default(autoincrement())
+  name      String
+  code      String         @unique
+  parentId  Int?
+  level     Int            @default(1)
+  parent    Organization?  @relation("OrgTree", fields: [parentId], references: [id])
+  children  Organization[] @relation("OrgTree")
+  users     User[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model User {
+  id             Int           @id @default(autoincrement())
+  username       String        @unique
+  passwordHash   String
+  displayName    String
+  phone          String?
+  enabled        Boolean       @default(true)
+  organizationId Int?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  roles          UserRole[]
+  tasks          RegulatoryTask[] @relation("TaskAssignee")
+  logs           AuditLog[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  code        String           @unique
+  name        String
+  description String?
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  code        String           @unique
+  name        String
+  description String?
+  roles       RolePermission[]
+}
+
+model UserRole {
+  userId Int
+  roleId Int
+  user   User @relation(fields: [userId], references: [id])
+  role   Role @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model Enterprise {
+  id                   Int              @id @default(autoincrement())
+  creditCode           String           @unique
+  name                 String
+  legalRepresentative  String
+  enterpriseType       String
+  address              String
+  region               String
+  foodCategory         String
+  businessStatus       String           @default("ACTIVE")
+  regulatoryDepartment String
+  contactName          String?
+  contactPhone         String?
+  currentRiskLevel     String           @default("B")
+  currentScore         Decimal          @default(80.00)
+  riskTags             String?
+  licenses             License[]
+  inspections          Inspection[]
+  penalties            Penalty[]
+  samples              SampleTest[]
+  complaints           Complaint[]
+  repairs              CreditRepair[]
+  scoreRecords         ScoreRecord[]
+  warnings             RiskWarning[]
+  tasks                RegulatoryTask[]
+  changeLogs           EnterpriseChangeLog[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([name])
+  @@index([region])
+  @@index([currentRiskLevel])
+}
+
+model EnterpriseChangeLog {
+  id           Int        @id @default(autoincrement())
+  enterpriseId Int
+  fieldName    String
+  oldValue     String?
+  newValue     String?
+  operator     String
+  reason       String?
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+  createdAt    DateTime   @default(now())
+}
+
+model License {
+  id            Int           @id @default(autoincrement())
+  enterpriseId  Int
+  licenseNo     String        @unique
+  licenseType   String
+  items         String
+  issuingAgency String
+  issueDate     DateTime
+  validFrom     DateTime
+  validTo       DateTime
+  status        String        @default("VALID")
+  enterprise    Enterprise    @relation(fields: [enterpriseId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Inspection {
+  id                   Int        @id @default(autoincrement())
+  enterpriseId          Int
+  taskCode              String?
+  inspectionDate        DateTime
+  inspectors            String
+  inspectionType        String
+  items                 String
+  result                String
+  problemCount          Int       @default(0)
+  seriousProblem        Boolean   @default(false)
+  problems              String?
+  rectificationRequired Boolean   @default(false)
+  rectificationDeadline DateTime?
+  reviewResult          String?
+  attachments           String?
+  enterprise            Enterprise @relation(fields: [enterpriseId], references: [id])
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+}
+
+model Penalty {
+  id                 Int        @id @default(autoincrement())
+  enterpriseId        Int
+  decisionNo          String     @unique
+  penaltyType         String
+  illegalFacts        String
+  amount              Decimal    @default(0.00)
+  penaltyDate         DateTime
+  executionStatus     String
+  foodSafetyMajorCase Boolean    @default(false)
+  seriousDishonesty   Boolean    @default(false)
+  liftedAt            DateTime?
+  enterprise          Enterprise @relation(fields: [enterpriseId], references: [id])
+  createdAt           DateTime   @default(now())
+}
+
+model SampleTest {
+  id              Int        @id @default(autoincrement())
+  enterpriseId    Int
+  sampleNo        String     @unique
+  sampleDate      DateTime
+  foodCategory    String
+  sampleName      String
+  testItems       String
+  conclusion      String
+  unqualifiedItem String?
+  disposalStatus  String
+  retestResult    String?
+  publicStatus    String
+  enterprise      Enterprise @relation(fields: [enterpriseId], references: [id])
+  createdAt       DateTime   @default(now())
+}
+
+model Complaint {
+  id             Int        @id @default(autoincrement())
+  enterpriseId   Int
+  complaintNo    String     @unique
+  acceptedAt     DateTime
+  channel        String
+  issueType      String
+  content        String
+  status         String
+  result         String?
+  verified       Boolean    @default(false)
+  feedbackAt     DateTime?
+  enterprise     Enterprise @relation(fields: [enterpriseId], references: [id])
+  createdAt      DateTime   @default(now())
+}
+
+model CreditRepair {
+  id             Int        @id @default(autoincrement())
+  enterpriseId   Int
+  applicationNo  String     @unique
+  appliedAt      DateTime
+  repairItem     String
+  materials      String
+  status         String
+  conclusion     String?
+  completedAt    DateTime?
+  impactScope    String?
+  enterprise     Enterprise @relation(fields: [enterpriseId], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Indicator {
+  id             Int       @id @default(autoincrement())
+  code           String    @unique
+  name           String
+  description    String
+  category       String
+  calculation    String
+  weight         Decimal
+  threshold      String
+  enabled        Boolean   @default(true)
+  enterpriseType String?
+  dataSource     String
+  version        String    @default("v1.0")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model ScoreModel {
+  id            Int           @id @default(autoincrement())
+  version       String        @unique
+  name          String
+  description   String
+  published     Boolean       @default(false)
+  publishedAt   DateTime?
+  levelMapping  String
+  forceRules    String
+  records       ScoreRecord[]
+  createdAt     DateTime      @default(now())
+}
+
+model ScoreRecord {
+  id              Int        @id @default(autoincrement())
+  enterpriseId    Int
+  modelId         Int
+  indicatorVersion String
+  score           Decimal
+  level           String
+  previousLevel   String?
+  details         String
+  reason          String
+  reviewStatus    String     @default("PENDING")
+  reviewer        String?
+  reviewedAt      DateTime?
+  enterprise      Enterprise @relation(fields: [enterpriseId], references: [id])
+  model           ScoreModel @relation(fields: [modelId], references: [id])
+  createdAt       DateTime   @default(now())
+
+  @@index([enterpriseId, createdAt])
+}
+
+model WarningRule {
+  id                  Int      @id @default(autoincrement())
+  code                String   @unique
+  name                String
+  warningType         String
+  conditionExpression String
+  level               String
+  applicableCategory  String?
+  handlingDays        Int      @default(7)
+  enabled             Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model RiskWarning {
+  id              Int               @id @default(autoincrement())
+  warningNo       String            @unique
+  enterpriseId    Int
+  warningType     String
+  triggeredBy     String
+  triggeredAt     DateTime          @default(now())
+  level           String
+  reason          String
+  suggestion      String
+  judgement       String?
+  status          String            @default("OPEN")
+  handlingDept    String?
+  enterprise      Enterprise        @relation(fields: [enterpriseId], references: [id])
+  tasks           RegulatoryTask[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([enterpriseId])
+  @@index([status])
+}
+
+model RegulatoryTask {
+  id                  Int        @id @default(autoincrement())
+  taskNo              String     @unique
+  enterpriseId         Int
+  warningId            Int?
+  title                String
+  matters              String
+  deadline             DateTime
+  executionDepartment  String
+  assigneeId           Int?
+  status               String     @default("PENDING")
+  result               String?
+  rectificationRequest String?
+  reviewConclusion     String?
+  archivedAt           DateTime?
+  enterprise           Enterprise @relation(fields: [enterpriseId], references: [id])
+  warning              RiskWarning? @relation(fields: [warningId], references: [id])
+  assignee             User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@index([status])
+  @@index([enterpriseId])
+}
+
+model DataBatch {
+  id             Int      @id @default(autoincrement())
+  batchNo        String   @unique
+  sourceType     String
+  sourceSystem   String?
+  fileName       String?
+  totalCount     Int      @default(0)
+  successCount   Int      @default(0)
+  failedCount    Int      @default(0)
+  qualitySummary String?
+  createdBy      String
+  createdAt      DateTime @default(now())
+}
+
+model SharedRecord {
+  id          Int      @id @default(autoincrement())
+  target      String
+  contentType String
+  purpose     String
+  scope       String
+  operator    String
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id        Int         @id @default(autoincrement())
+  userId    Int?
+  action    String
+  module    String
+  targetId  String?
+  detail    String?
+  ip        String?
+  userAgent String?
+  user      User?       @relation(fields: [userId], references: [id])
+  createdAt DateTime    @default(now())
+
+  @@index([module])
+  @@index([createdAt])
+}
